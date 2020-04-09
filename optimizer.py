@@ -78,6 +78,8 @@ class E7GearOptimizer:
         """
         Gets the 6* fully awakened base stats of a hero from epicsevendb.com
 
+        Stat calculation: https://github.com/EpicSevenDB/api/issues/2
+
         :param hero: hero name
         :return: Dictionary of the hero's base stats
         """
@@ -85,7 +87,7 @@ class E7GearOptimizer:
         pattern = re.compile(r'[\W_ ]+')
         hero = pattern.sub(' ', hero)
         data = requests.get('https://api.epicsevendb.com/hero/{}'.format('-'.join(hero.lower().split()))).json()
-        stats = data['results'][0]['stats']['lv60SixStarFullyAwakened']
+        stats = data['results'][0]['calculatedStatus']['lv60SixStarFullyAwakened']
         hero_base_stats = {
             'Attack': stats['atk'],
             'Defense': stats['def'],
@@ -436,7 +438,6 @@ class E7GearOptimizer:
         :param min_max_constraints: Final hero stats min-max constraints
         :return: None
         """
-        print(required_sets)
         # No hero selected
         if self.hero_base_stat is None:
             return
@@ -469,11 +470,8 @@ class E7GearOptimizer:
         rings = rings[:10]
         boots = boots[:10]
 
-        print('Creating list')
-        start = time.time()
         loadouts = [Loadout(loadout) for loadout in product(weapons, helmets, armors, necklaces, rings, boots)]
         results = []
-        print('Finished creating list: {}s'.format(time.time() - start))
 
         if len(loadouts) < self.cores:
             output = self._optimize_aux(loadouts, priorities, required_sets, min_max_constraints)
@@ -500,9 +498,6 @@ class E7GearOptimizer:
 
         results.sort(key=lambda a: self.score_final_stats(a[0], priorities), reverse=True)
         self.optimizer_output = results[:50]
-        if len(results):
-            print('Lowest score:', self.score_final_stats(results[-1][0], priorities))
-        print('Optimizer done: {}s'.format(time.time() - start))
 
     def get_gear(self, gear_id: int) -> Gear:
         """
