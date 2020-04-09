@@ -1,0 +1,73 @@
+#window_frame {
+  background-color: #000000;
+}
+
+#window_content {
+    background-color: #121212;
+}
+#title_bar {
+  border: 0px none;
+  background-color: #000000;
+  height: 24px;
+}
+
+#window_title {
+  color: #FFFFFF;
+  margin: 4px;
+}
+
+#btn_close, #btn_restore, #btn_maximize, #btn_minimize {
+  min-width: 21px;
+  min-height: 21px;
+  max-width: 21px;
+  max-height: 21px;
+  margin: 4px;
+  border: transparent;
+  background-color: #000000;
+}
+
+#btn_close::hover {
+  background-color: #FF0000;
+}
+
+#btn_minimize::hover, #btn_maximize::hover, #btn_restore::hover {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+QToolBar {
+  border: none;
+}
+
+QTabBar {
+  background-color: #000000;
+}
+
+QTabBar::tab {
+  padding: 4px 6px;
+  background-color: transparent;
+  border-bottom: 2px solid transparent;
+  color: #666666;
+  font-weight: bold;
+}
+
+QTabBar::tab:selected, QTabBar::tab:hover {
+  color: #FFFFFF;
+  border-bottom: 2px solid #6200EE;
+}
+
+QTabBar::tab:selected:disabled {
+  border-bottom: 2px solid palette(light);
+}
+
+QTabWidget {
+    color: #000000;
+}
+
+QTabWidget::pane { /* The tab widget frame */
+    border-left: 2px solid #C2C7CB;
+}
+
+QIcon {
+    border: 1px;
+}
+

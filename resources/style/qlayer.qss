@@ -1,0 +1,17 @@
+QLabel#qlayer_title {
+    qproperty-alignment: AlignLeft;
+    background-color: #1E1E1E;
+    padding: 5px 0px;
+    color: rgb(255, 255, 255);
+    max-height: 25px;
+    font-size: 14px;
+}
+
+QFrame#qlayer_frame {
+	border: 1px solid #1E1E1E;
+	background-color: #1E1E1E;
+}
+
+QWidget#layer1 {
+    background-color: #1E1E1E
+}

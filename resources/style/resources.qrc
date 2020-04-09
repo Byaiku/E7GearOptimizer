@@ -1,0 +1,9 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file alias="close">images/close.png</file>
+    <file alias="maximize">images/maximize.png</file>
+    <file alias="minimize">images/minimize.png</file>
+    <file alias="restore">images/restore.png</file>
+    <file alias="optimizer">images/speed.png</file>
+</qresource>
+</RCC>
