@@ -12,7 +12,7 @@ from tesserocr import PyTessBaseAPI, PSM, OEM
 from gear import *
 import time
 
-tesseract = PyTessBaseAPI(path='resources/tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY)
+tesseract = PyTessBaseAPI(path='resources/tessdata', psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY, )
 
 
 class E7GearOptimizer:
@@ -150,7 +150,8 @@ class E7GearOptimizer:
         :param equip_stat: stat string passed from OCR
         :return: Stat object
         """
-        matched = re.findall(r'([^\d][a-zA-Z\s]+).*?([0-9]+%*)', equip_stat.replace(',', '').replace('T%', '7%'))
+        matched = re.findall(r'([^\d][a-zA-Z\s]+).*?([0-9]+%*)',
+                             equip_stat.replace(',', '').replace('T%', '7%'))
         if matched:
             stat = -1
             if 'attack' in matched[0][0].lower():

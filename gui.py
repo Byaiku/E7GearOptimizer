@@ -1,12 +1,10 @@
 import os
 from threading import Thread
 
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QPoint, QRect
-from PyQt5.QtGui import QIcon, QPixmap, QFont, QIntValidator
-from PyQt5.QtWidgets import QVBoxLayout, QPushButton, QGridLayout, QLabel, QGroupBox, QWidget, \
-    QCompleter, QLineEdit, QFrame, QListWidget, QTableWidget, QTableWidgetItem, QFileDialog, \
-    QItemDelegate, QAbstractItemView, QStackedWidget, QHBoxLayout, QTabBar, QTabWidget, QStylePainter, QStyleOptionTab,\
-    QStyle, QProxyStyle, QSizePolicy
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+
 from requests import get
 
 from gear import *
@@ -14,6 +12,95 @@ from optimizer import E7GearOptimizer
 import re
 
 QLAYER_STYLESHEET = 'resources/style/qlayer.qss'
+
+
+class GearTableModel(QAbstractTableModel):
+    headers = ['Type', 'Set', 'Main Stat', 'Substat 1', 'Substat 2', 'Substat 3', 'Substat 4']
+    gears = []
+
+    def setGears(self, gears):
+        self.gears = gears
+
+    def rowCount(self, parent=None, *args, **kwargs):
+        return len(self.gears)
+
+    def columnCount(self, parent=None, *args, **kwargs):
+        return 7
+
+    def data(self, index, role=None):
+        row = index.row()
+        col = index.column()
+
+        if role == Qt.DisplayRole:
+            if col == 0:
+                return str(GearType(self.gears[row].type).name)
+            elif col == 1:
+                return str(GearSet(self.gears[row].set).name)
+            elif col == 2:
+                return str(self.gears[row].main_stat)
+            else:
+                return str(self.gears[row].substats[col - 3])
+
+        return QVariant()
+
+    def headerData(self, index, orientation, role=None):
+        if role != Qt.DisplayRole:
+            return QVariant()
+
+        if orientation == Qt.Horizontal:
+            return self.headers[index]
+
+        return index + 1
+
+
+class GearFilter(QSortFilterProxyModel):
+    __gear_type = -1
+    __gear_set = -1
+    __main_stat = -1
+    __substats = [-1, -1, -1, -1]
+
+    @pyqtSlot(int)
+    def set_gear_type(self, gear_type):
+        self.__gear_type = gear_type - 1
+        self.invalidateFilter()
+
+    @pyqtSlot(int)
+    def set_gear_set(self, gear_set):
+        self.__gear_set = gear_set - 1
+        self.invalidateFilter()
+
+    @pyqtSlot(int)
+    def set_main_stat(self, main_stat):
+        self.__main_stat = main_stat - 1
+        self.invalidateFilter()
+
+    @pyqtSlot(int, int)
+    def set_substats(self, substat_num, substat):
+        self.__substats[substat_num] = substat - 1
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        index_type = self.sourceModel().index(source_row, 0, source_parent).data()
+        index_set = self.sourceModel().index(source_row, 1, source_parent).data()
+        index_main = self.sourceModel().index(source_row, 2, source_parent).data()
+        index_substat1 = self.sourceModel().index(source_row, 3, source_parent).data()
+        index_substat2 = self.sourceModel().index(source_row, 4, source_parent).data()
+        index_substat3 = self.sourceModel().index(source_row, 5, source_parent).data()
+        index_substat4 = self.sourceModel().index(source_row, 6, source_parent).data()
+
+        if (self.__gear_type == -1 or self.__gear_type == GearType[index_type].value) and \
+           (self.__gear_set == -1 or self.__gear_set == GearSet[index_set].value) and \
+           (self.__main_stat == -1 or self.__main_stat == GearStat[index_main.rsplit(' ', 1)[0]].value) and \
+           (self.__substats[0] == -1 or self.__substats[0] == GearStat[index_substat1.rsplit(' ', 1)[0]].value) and \
+           (self.__substats[1] == -1 or self.__substats[1] == GearStat[index_substat2.rsplit(' ', 1)[0]].value) and \
+           (self.__substats[2] == -1 or self.__substats[2] == GearStat[index_substat3.rsplit(' ', 1)[0]].value) and \
+           (self.__substats[3] == -1 or self.__substats[3] == GearStat[index_substat4.rsplit(' ', 1)[0]].value):
+                return True
+
+        return False
+
+    def headerData(self, index, orientation, role=None):
+        return self.sourceModel().headerData(index, orientation, role)
 
 
 class TabBar(QTabBar):
@@ -407,7 +494,7 @@ class GUI(QWidget):
 
     def _init_gears_tab(self):
         # Import options
-        btn_import_images = QPushButton('Import Images')
+        btn_import_images = QPushButton('Import Images (1280*720p)')
 
         def import_gear_image():
             file_dialog = QFileDialog()
@@ -418,35 +505,77 @@ class GUI(QWidget):
         btn_import_images.clicked.connect(import_gear_image)
 
         # Gears
-        gear_table = QTableWidget()
-        gear_table.setColumnCount(7)
-        gear_table.setHorizontalHeaderLabels(['Type', 'Set', 'Main Stat', 'Substat 1', 'Substat 2', 'Substat 3',
-                                              'Substat 4'])
+        self.gear_model = GearTableModel()
+        gear_filter = GearFilter()
+        gear_filter.setSourceModel(self.gear_model)
+        gear_filter.setDynamicSortFilter(True)
+
+        gear_table = QTableView()
+        gear_table.setModel(gear_filter)
         gear_table.setItemDelegate(CenterAlignDelegate())
         gear_table.setSelectionBehavior(QAbstractItemView.SelectRows)
 
         def add_gear_to_table(gears):
-            gear_table.setRowCount(0)
-            row_count = 0
-            for gear in gears:
-                gear_table.insertRow(row_count)
-                gear_table.setItem(row_count, 0, QTableWidgetItem(GearType(gear.type).name))
-                gear_table.setItem(row_count, 1, QTableWidgetItem(GearSet(gear.set).name))
-                gear_table.setItem(row_count, 2, QTableWidgetItem(str(gear.main_stat)))
-                gear_table.setItem(row_count, 3, QTableWidgetItem(str(gear.substats[0])))
-                gear_table.setItem(row_count, 4, QTableWidgetItem(str(gear.substats[1])))
-                gear_table.setItem(row_count, 5, QTableWidgetItem(str(gear.substats[2])))
-                gear_table.setItem(row_count, 6, QTableWidgetItem(str(gear.substats[3])))
-                row_count += 1
+            self.gear_model.layoutAboutToBeChanged.emit()
+            self.gear_model.setGears(gears)
+            self.gear_model.layoutChanged.emit()
 
         self.gear_added_signal.connect(add_gear_to_table)
 
+        # Stat min-max constraints
+        widget_gear_filter = QWidget()
+        layout_gear_filter = QFormLayout()
+
+        combo_gear_type = QComboBox()
+        combo_gear_type.addItems([''] + [gear_type.name for gear_type in GearType])
+        combo_gear_type.currentIndexChanged.connect(gear_filter.set_gear_type)
+
+        combo_gear_set = QComboBox()
+        combo_gear_set.addItems([''] + [gear_set.name for gear_set in GearSet])
+        combo_gear_set.currentIndexChanged.connect(gear_filter.set_gear_set)
+
+        label_gear_type = QLabel('Gear Type:')
+        label_gear_type.setFont(QFont('Courier'))
+        layout_gear_filter.addRow(label_gear_type, combo_gear_type)
+
+        label_gear_set = QLabel('Gear Set:')
+        label_gear_set.setFont(QFont('Courier'))
+        layout_gear_filter.addRow(label_gear_set, combo_gear_set)
+
+        label_gear_main = QLabel('Main Stat:')
+        label_gear_main.setFont(QFont('Courier'))
+        gear_stat = QComboBox()
+        gear_stat.addItems([''] + [stat.name for stat in GearStat])
+        gear_stat.currentIndexChanged.connect(gear_filter.set_main_stat)
+        layout_gear_filter.addRow(label_gear_main, gear_stat)
+
+        for i in range(4):
+            label = QLabel('Substat #{}:'.format(i))
+            label.setFont(QFont('Courier'))
+
+            gear_stat = QComboBox()
+            gear_stat.addItems([''] + [stat.name for stat in GearStat])
+            gear_stat.currentIndexChanged.connect(lambda: gear_filter.set_substats(i, gear_stat.currentIndex()))
+
+            layout_gear_filter.addRow(label, gear_stat)
+        widget_gear_filter.setLayout(layout_gear_filter)
+        widget_gear_filter.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+
         # Putting all together
         qlayer_import = QLayer('Import', btn_import_images)
+        qlayer_gear_filter = QLayer('Filter', widget_gear_filter)
         qlayer_gears = QLayer('Equipment', gear_table)
 
-        layout_tab = QGridLayout()
-        layout_tab.addWidget(qlayer_import)
+        widget_left = QWidget()
+        layout_left = QVBoxLayout()
+        layout_left.addWidget(qlayer_import)
+        layout_left.addWidget(qlayer_gear_filter)
+        layout_left.setSizeConstraint(QLayout.SetFixedSize)
+        layout_left.setContentsMargins(0, 0, 0, 0)
+        widget_left.setLayout(layout_left)
+
+        layout_tab = QHBoxLayout()
+        layout_tab.addWidget(widget_left, alignment=Qt.AlignTop)
         layout_tab.addWidget(qlayer_gears)
         self.tab_gears.setLayout(layout_tab)
 
