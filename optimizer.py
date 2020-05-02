@@ -259,6 +259,7 @@ class E7GearOptimizer:
                     dmg = stats['Health'] / 10000
             elif GearStat(priority_stat) == GearStat.CritC:
                 crit = max(0, min(stats['Crit. C'], 100)) / 100
+                crit = 1
             elif GearStat(priority_stat) == GearStat.CritD:
                 crit_dmg = stats['Crit. D'] / 100 - 1
             elif GearStat(priority_stat) == GearStat.Defense:
@@ -421,8 +422,6 @@ class E7GearOptimizer:
 
         results.sort(key=lambda a: self.score_final_stats(a[0], priorities), reverse=True)
         results = results[:50]
-        if len(results):
-            print('Lowest score:', self.score_final_stats(results[-1][0], priorities))
 
         if output:
             output.put(results)
@@ -445,8 +444,8 @@ class E7GearOptimizer:
         if len(self.gears) == 0:
             return
 
-        print('Starting optimizer')
         self.optimizer_output.clear()
+        print("Starting optimizer")
 
         # Grab/sort/grade equips for smaller combination
         weapons = [x for x in self.gears if x.type == GearType.Weapon.value if not x.in_use]
@@ -499,6 +498,7 @@ class E7GearOptimizer:
 
         results.sort(key=lambda a: self.score_final_stats(a[0], priorities), reverse=True)
         self.optimizer_output = results[:50]
+        print("Finished optimization")
 
     def get_gear(self, gear_id: int) -> Gear:
         """
@@ -507,11 +507,18 @@ class E7GearOptimizer:
         :param gear_id: ID of the gear
         :return: Gear with the given ID
         """
-        idx = gear_id
-        while self.gears[idx].id != gear_id:
-            idx = idx - 1
+        start = 0
+        end = len(self.gears) - 1
+        while start <= end:
+            idx = (start + end) // 2
+            if self.gears[idx].id == gear_id:
+                return self.gears[idx]
+            elif self.gears[idx].id > gear_id:
+                end = idx - 1
+            else:
+                start = idx + 1
 
-        return self.gears[idx]
+        raise IndexError('Gear ID not found in inventory...')
 
     def set_gear_usage(self, gear_id: int, in_use: bool):
         """
@@ -521,8 +528,16 @@ class E7GearOptimizer:
         :param in_use: whether it's in use or not
         :return None
         """
-        idx = gear_id
-        while self.gears[idx].id != gear_id:
-            idx = idx - 1
+        start = 0
+        end = len(self.gears) - 1
+        while start <= end:
+            idx = (start + end) // 2
+            if self.gears[idx].id == gear_id:
+                self.gears[idx].in_use = in_use
+                return
+            elif self.gears[idx].id > gear_id:
+                end = idx - 1
+            else:
+                start = idx + 1
 
-        self.gears[idx].in_use = in_use
+        raise IndexError('Gear ID not found in inventory...')

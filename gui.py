@@ -522,7 +522,7 @@ class GUI(QWidget):
 
         self.gear_added_signal.connect(add_gear_to_table)
 
-        # Stat min-max constraints
+        # Gear filter
         widget_gear_filter = QWidget()
         layout_gear_filter = QFormLayout()
 
